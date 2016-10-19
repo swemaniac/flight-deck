@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Map</title>
+
+        <script src="https://api.mapbox.com/mapbox-gl-js/v0.26.0/mapbox-gl.js"></script>
+        <script src="https://rawgit.com/springmeyer/arc.js/gh-pages/arc.js"></script>
+
+        <link href="https://api.mapbox.com/mapbox-gl-js/v0.26.0/mapbox-gl.css" rel="stylesheet" />
+
+        <style>
+            html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+            }
+
+            .mapboxgl-popup-content {
+                background: rgba(0, 0, 0, 0.4);
+                box-shadow: none;
+                padding: 10px 15px;
+                color: #fff;
+                font-size: 18px;
+                border-radius: 0;
+            }
+
+            .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+                border-top-color: rgba(0, 0, 0, 0.4);
+                visibility: hidden;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="map" style="width: 100%; height: 100%;"></div>
+
+        <script>
+            mapboxgl.accessToken = "pk.eyJ1Ijoic3dlbWFuaWFjIiwiYSI6ImlaRGhPM0kifQ.Sb2HS1l-gzB1naVi_kBejw";
+
+            var map = new mapboxgl.Map({
+                container: "map",
+                style: "mapbox://styles/swemaniac/ciuei4m4400cw2ipstkxkhqeo"
+            });
+
+            var routes = [
+                {
+                    "dep": "ESSA",
+                    "dest": "ESNN",
+                    "start": { x: 17.9, y: 59.6 },
+                    "end": { x: 17.4, y: 62.5 }
+                },
+
+                {
+                    "dep": "ESSA",
+                    "dest": "ENGM",
+                    "start": { x: 17.9, y: 59.6 },
+                    "end": { x: 11.1, y: 60.1 }
+                },
+
+                {
+                    "dep": "ESSA",
+                    "dest": "EKCH",
+                    "start": { x: 17.9, y: 59.6 },
+                    "end": { x: 12.6, y: 55.6 }
+                },
+
+                {
+                    "dep": "ESSA",
+                    "dest": "EFHK",
+                    "start": { x: 17.9, y: 59.6 },
+                    "end": { x: 24.9, y: 60.3 }
+                },
+
+                {
+                    "dep": "ESSA",
+                    "dest": "ESXX",
+                    "start": { x: 17.9, y: 59.6 },
+                    "end": { x: 14.0, y: 57.7 }
+                },
+
+                {
+                    "dep": "EKCH",
+                    "dest": "KEWR",
+                    "start": { x: 12.6, y: 55.6 },
+                    "end": { x: -74.1, y: 40.6 }
+                }
+            ];
+
+            for (var i in routes) {
+                var generator = new arc.GreatCircle(routes[i].start, routes[i].end, { 'name': routes[i].dep + '-' + routes[i].dest });
+                routes[i].arc = generator.Arc(100,{offset:10}).json();
+            }
+
+            var endpoints = [];
+
+            for (var i in routes) {
+                var r = routes[i];
+
+                if (endpoints.indexOf(r.dep) == -1) {
+                    endpoints[r.dep] = routes[i].start;
+                }
+
+                if (endpoints.indexOf(r.dest) == -1) {
+                    endpoints[r.dest] = routes[i].end;
+                }
+            }
+
+            map.on('load', function() {
+                map.addSource('routes', {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'FeatureCollection',
+                        'features': routes.map(function(a) { return a.arc; })
+                    }
+                });
+
+                map.addSource('endpoints', {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'FeatureCollection',
+                        'features': Object.keys(endpoints).map(function(k) {
+                            return {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [endpoints[k].x, endpoints[k].y]
+                                },
+                                'properties': {
+                                    'name': k
+                                }
+                            };
+                        })
+                    }
+                });
+
+                map.addLayer({
+                    "id": "routes",
+                    "type": "line",
+                    "source": "routes",
+                    "layout": {
+                        "line-join": "round",
+                        "line-cap": "round"
+                    },
+                    "paint": {
+                        "line-color": "#fff",
+                        "line-width": 1,
+                        "line-blur": 0
+                    }
+                });
+
+                var framesPerSecond = 15;
+                var initialOpacity = 1
+                var opacity = initialOpacity;
+                var initialRadius = 5;
+                var radius = initialRadius;
+                var maxRadius = 15;
+
+                map.addLayer({
+                    "id": "endpoints",
+                    "type": "circle",
+                    "source": "endpoints",
+                    "paint": {
+                        "circle-radius": initialRadius,
+                        "circle-color": "#fff"
+                    }
+                });
+
+                map.addLayer({
+                    "id": "blip",
+                    "source": "endpoints",
+                    "type": "circle",
+                    "paint": {
+                        "circle-radius": initialRadius,
+                        "circle-radius-transition": {duration: 0},
+                        "circle-opacity-transition": {duration: 0},
+                        "circle-color": "#fff"
+                    }
+                });
+
+                map.addLayer({
+                    'id': 'route-names',
+                    'type': 'symbol',
+                    'source': 'routes',
+                    'layout': {
+                        'symbol-placement': 'line',
+                        'text-field': '{name}',
+                        'text-size': 13,
+                        'text-anchor': 'bottom',
+                    },
+                    'paint': {
+                        'text-color': '#fff'
+                    }
+                });
+
+                var popup = new mapboxgl.Popup({
+                    closeButton: false,
+                    closeOnClick: false
+                });
+
+                map.on('mousemove', function (e) {
+                    var features = map.queryRenderedFeatures(e.point, { layers: ['endpoints'] });
+
+                    if (features.length) {
+                        map.getCanvas().style.cursor = 'pointer';
+                        popup.setLngLat(e.lngLat);
+                        popup.setHTML(features[0].properties.name);
+                        popup.addTo(map);
+                    } else {
+                        popup.remove();
+                        map.getCanvas().style.cursor = '';
+                    }
+                });
+
+                function animateMarker(timestamp) {
+                    setTimeout(function() {
+                        requestAnimationFrame(animateMarker);
+
+                        radius += (maxRadius - radius) / framesPerSecond;
+                        opacity -= (.9 / framesPerSecond);
+
+                        if (opacity <= 0) {
+                            radius = initialRadius;
+                            opacity = initialOpacity;
+                        }
+
+                        map.setPaintProperty('blip', 'circle-radius', radius);
+                        map.setPaintProperty('blip', 'circle-opacity', opacity);
+                    }, 1000 / framesPerSecond);
+                }
+
+                // Start the animation.
+                animateMarker(0);
+            });
+        </script>
+    </body>
+</html>
