@@ -60,9 +60,94 @@
 
                 {
                     "dep": "ESSA",
+                    "dest": "EFVA",
+                    "start": { x: 17.9, y: 59.6 },
+                    "end": { x: 21.764167, y: 63.045278 },
+                    "flights": [
+                        {
+                            "date": "2016-01-01 12:00:00",
+                            "route": "ESSA RESNA P609 SUBUG EFVA",
+                            "waypoints": {
+                                "ESSA": {
+                                    x: 17.9, y: 59.6
+                                },
+
+                                "RESNA": {
+                                    x: 18.024833, y: 60.366944
+                                },
+
+                                "SIPRI": {
+                                    x: 18.751722, y: 60.845611
+                                },
+
+                                "BAKLA": {
+                                    x: 19.415833, y: 61.362500
+                                },
+
+                                "SUBUG": {
+                                    x: 21.374722, y: 62.691389
+                                },
+
+                                "EFVA": {
+                                    x: 21.764167, y: 63.045278
+                                },
+                            }
+                        }
+                    ]
+                },
+
+                {
+                    "dep": "ESSA",
                     "dest": "EKCH",
                     "start": { x: 17.9, y: 59.6 },
-                    "end": { x: 12.6, y: 55.6 }
+                    "end": { x: 12.6, y: 55.6 },
+                    "flights": [
+                        {
+                            "date": "2016-01-01 12:00:00",
+                            "route": "ESSA DKR N872 TOKSI Z32 MISMA N872 SVD EKCH",
+                            "waypoints": {
+                                "ESSA": {
+                                    x: 17.9, y: 59.6
+                                },
+
+                                "DKR": {
+                                    x: 17.012083, y: 59.207167
+                                },
+
+                                "TIPIX": {
+                                    x: 16.524194, y: 58.904694
+                                },
+
+                                "LIBSI": {
+                                    x: 16.249611, y: 58.731278
+                                },
+
+                                "KOXIM": {
+                                    x: 15.735556, y: 58.400278
+                                },
+
+                                "ELPAX": {
+                                    x: 15.273361, y: 58.095472
+                                },
+
+                                "TOKSI": {
+                                    x: 13.911028, y: 57.155583
+                                },
+
+                                "MISMA": {
+                                    x: 13.202806, y: 56.641250
+                                },
+
+                                "SVD": {
+                                    x: 12.573778, y: 56.168861
+                                },
+
+                                "EKCH": {
+                                    x: 12.6, y: 55.6
+                                },
+                            }
+                        }
+                    ]
                 },
 
                 {
@@ -84,6 +169,20 @@
                     "dest": "KEWR",
                     "start": { x: 12.6, y: 55.6 },
                     "end": { x: -74.1, y: 40.6 }
+                },
+
+                {
+                    "dep": "ENGM",
+                    "dest": "ENZA",
+                    "start": { x: 11.1, y: 60.1 },
+                    "end": { x: 5.6, y: 58.8 }
+                },
+
+                {
+                    "dep": "ENGM",
+                    "dest": "BIRK",
+                    "start": { x: 11.1, y: 60.1 },
+                    "end": { x: -21.9, y: 64.13 }
                 }
             ];
 
@@ -199,18 +298,102 @@
                 });
 
                 map.on('mousemove', function (e) {
-                    var features = map.queryRenderedFeatures(e.point, { layers: ['endpoints'] });
+                    var features = map.queryRenderedFeatures(e.point, { layers: ['endpoints', 'route-names'] });
 
                     if (features.length) {
+                        var feature = features[0];
+
                         map.getCanvas().style.cursor = 'pointer';
-                        popup.setLngLat(e.lngLat);
-                        popup.setHTML(features[0].properties.name);
-                        popup.addTo(map);
+
+                        if (feature.layer.source == 'endpoints') {
+                            popup.setLngLat(e.lngLat);
+                            popup.setHTML(feature.properties.name);
+                            popup.addTo(map);
+                        } else {
+
+                        }
                     } else {
-                        popup.remove();
                         map.getCanvas().style.cursor = '';
+                        popup.remove();
                     }
                 });
+
+                map.on('click', function(e) {
+                    var features = map.queryRenderedFeatures(e.point, { layers: ['endpoints', 'route-names'] });
+
+                    if (features.length) {
+                        var feature = features[0];
+
+                        if (feature.layer.source == 'endpoints') {
+                            if (map.getLayer('flight')) {
+                                map.setLayoutProperty('flight', 'visibility', 'none');
+                            }
+
+                            map.getSource('routes').setData({
+                                'type': 'FeatureCollection',
+                                'features': routes.filter(function(a) { return a.dep == feature.properties.name; }).map(function(a) { return a.arc; })
+                            });
+
+                            map.setLayoutProperty('routes', 'visibility', 'visible');
+                            map.setLayoutProperty('route-names', 'visibility', 'visible');
+                        } else {
+                            var dep = feature.properties.name.substring(0, 4);
+                            var dest = feature.properties.name.substring(5);
+                            var flights = routes.filter(function(a) { return a.dep == dep && a.dest == dest; })[0].flights;
+
+                            // TODO: popup list of individual flights
+
+                            if (flights) {
+                                var flight = flights[0];
+                                map.setLayoutProperty('routes', 'visibility', 'none');
+                                map.setLayoutProperty('route-names', 'visibility', 'none');
+                                showFlight(flight);
+                            }
+                        }
+                    }
+                });
+
+                function showFlight(flight) {
+                    var src = map.getSource('flight');
+
+                    var data = {
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'LineString',
+                            'coordinates': Object.keys(flight.waypoints).map(function(w) { return [flight.waypoints[w].x, flight.waypoints[w].y]; })
+                        }
+                    };
+
+                    if (!src) {
+                        map.addSource('flight', {
+                            'type': 'geojson',
+                            'data': data
+                        });
+                    } else {
+                        src.setData(data);
+                    }
+
+                    var layer = map.getLayer('flight');
+
+                    if (!layer) {
+                        map.addLayer({
+                            "id": "flight",
+                            "type": "line",
+                            "source": "flight",
+                            "layout": {
+                                "line-join": "round",
+                                "line-cap": "round"
+                            },
+                            "paint": {
+                                "line-color": "#fff",
+                                "line-width": 1,
+                                "line-blur": 0
+                            }
+                        });
+                    } else {
+                        map.setLayoutProperty('flight', 'visibility', 'visible');
+                    }
+                }
 
                 function animateMarker(timestamp) {
                     setTimeout(function() {
