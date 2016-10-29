@@ -44,7 +44,7 @@
             });
 
             map.on('load', function() {
-                fetch('/api.php?action=routes').then(d => d.json().then(loadMap));
+                fetch('api.php?action=routes').then(d => d.json().then(loadMap));
             });
 
             function loadMap(routes) {
