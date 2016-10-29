@@ -43,169 +43,30 @@
                 style: "mapbox://styles/swemaniac/ciuei4m4400cw2ipstkxkhqeo"
             });
 
-            var routes = [
-                {
-                    "dep": "ESSA",
-                    "dest": "ESNN",
-                    "start": { x: 17.9, y: 59.6 },
-                    "end": { x: 17.4, y: 62.5 }
-                },
-
-                {
-                    "dep": "ESSA",
-                    "dest": "ENGM",
-                    "start": { x: 17.9, y: 59.6 },
-                    "end": { x: 11.1, y: 60.1 }
-                },
-
-                {
-                    "dep": "ESSA",
-                    "dest": "EFVA",
-                    "start": { x: 17.9, y: 59.6 },
-                    "end": { x: 21.764167, y: 63.045278 },
-                    "flights": [
-                        {
-                            "date": "2016-01-01 12:00:00",
-                            "route": "ESSA RESNA P609 SUBUG EFVA",
-                            "waypoints": {
-                                "ESSA": {
-                                    x: 17.9, y: 59.6
-                                },
-
-                                "RESNA": {
-                                    x: 18.024833, y: 60.366944
-                                },
-
-                                "SIPRI": {
-                                    x: 18.751722, y: 60.845611
-                                },
-
-                                "BAKLA": {
-                                    x: 19.415833, y: 61.362500
-                                },
-
-                                "SUBUG": {
-                                    x: 21.374722, y: 62.691389
-                                },
-
-                                "EFVA": {
-                                    x: 21.764167, y: 63.045278
-                                },
-                            }
-                        }
-                    ]
-                },
-
-                {
-                    "dep": "ESSA",
-                    "dest": "EKCH",
-                    "start": { x: 17.9, y: 59.6 },
-                    "end": { x: 12.6, y: 55.6 },
-                    "flights": [
-                        {
-                            "date": "2016-01-01 12:00:00",
-                            "route": "ESSA DKR N872 TOKSI Z32 MISMA N872 SVD EKCH",
-                            "waypoints": {
-                                "ESSA": {
-                                    x: 17.9, y: 59.6
-                                },
-
-                                "DKR": {
-                                    x: 17.012083, y: 59.207167
-                                },
-
-                                "TIPIX": {
-                                    x: 16.524194, y: 58.904694
-                                },
-
-                                "LIBSI": {
-                                    x: 16.249611, y: 58.731278
-                                },
-
-                                "KOXIM": {
-                                    x: 15.735556, y: 58.400278
-                                },
-
-                                "ELPAX": {
-                                    x: 15.273361, y: 58.095472
-                                },
-
-                                "TOKSI": {
-                                    x: 13.911028, y: 57.155583
-                                },
-
-                                "MISMA": {
-                                    x: 13.202806, y: 56.641250
-                                },
-
-                                "SVD": {
-                                    x: 12.573778, y: 56.168861
-                                },
-
-                                "EKCH": {
-                                    x: 12.6, y: 55.6
-                                },
-                            }
-                        }
-                    ]
-                },
-
-                {
-                    "dep": "ESSA",
-                    "dest": "EFHK",
-                    "start": { x: 17.9, y: 59.6 },
-                    "end": { x: 24.9, y: 60.3 }
-                },
-
-                {
-                    "dep": "ESSA",
-                    "dest": "ESXX",
-                    "start": { x: 17.9, y: 59.6 },
-                    "end": { x: 14.0, y: 57.7 }
-                },
-
-                {
-                    "dep": "EKCH",
-                    "dest": "KEWR",
-                    "start": { x: 12.6, y: 55.6 },
-                    "end": { x: -74.1, y: 40.6 }
-                },
-
-                {
-                    "dep": "ENGM",
-                    "dest": "ENZA",
-                    "start": { x: 11.1, y: 60.1 },
-                    "end": { x: 5.6, y: 58.8 }
-                },
-
-                {
-                    "dep": "ENGM",
-                    "dest": "BIRK",
-                    "start": { x: 11.1, y: 60.1 },
-                    "end": { x: -21.9, y: 64.13 }
-                }
-            ];
-
-            for (var i in routes) {
-                var generator = new arc.GreatCircle(routes[i].start, routes[i].end, { 'name': routes[i].dep + '-' + routes[i].dest });
-                routes[i].arc = generator.Arc(100,{offset:10}).json();
-            }
-
-            var endpoints = [];
-
-            for (var i in routes) {
-                var r = routes[i];
-
-                if (endpoints.indexOf(r.dep) == -1) {
-                    endpoints[r.dep] = routes[i].start;
-                }
-
-                if (endpoints.indexOf(r.dest) == -1) {
-                    endpoints[r.dest] = routes[i].end;
-                }
-            }
-
             map.on('load', function() {
+                fetch('/api.php?action=routes').then(d => d.json().then(loadMap));
+            });
+
+            function loadMap(routes) {
+                for (var i in routes) {
+                    var generator = new arc.GreatCircle({ x: routes[i].dep_lng, y: routes[i].dep_lat }, { x: routes[i].dest_lng, y: routes[i].dest_lat }, { 'name': routes[i].dep_icao + '-' + routes[i].dest_icao });
+                    routes[i].arc = generator.Arc(100,{offset:10}).json();
+                }
+
+                var endpoints = [];
+
+                for (var i in routes) {
+                    var r = routes[i];
+
+                    if (endpoints.indexOf(r.dep_icao) == -1) {
+                        endpoints[r.dep_icao] = { x: routes[i].dep_lng, y: routes[i].dep_lat }
+                    }
+
+                    if (endpoints.indexOf(r.dest_icao) == -1) {
+                        endpoints[r.dest_icao] = { x: routes[i].dest_lng, y: routes[i].dest_lat }
+                    }
+                }
+
                 map.addSource('routes', {
                     'type': 'geojson',
                     'data': {
@@ -331,15 +192,15 @@
 
                             map.getSource('routes').setData({
                                 'type': 'FeatureCollection',
-                                'features': routes.filter(function(a) { return a.dep == feature.properties.name; }).map(function(a) { return a.arc; })
+                                'features': routes.filter(function(a) { return a.dep_icao == feature.properties.name; }).map(function(a) { return a.arc; })
                             });
 
                             map.setLayoutProperty('routes', 'visibility', 'visible');
                             map.setLayoutProperty('route-names', 'visibility', 'visible');
                         } else {
-                            var dep = feature.properties.name.substring(0, 4);
+                            /*var dep = feature.properties.name.substring(0, 4);
                             var dest = feature.properties.name.substring(5);
-                            var flights = routes.filter(function(a) { return a.dep == dep && a.dest == dest; })[0].flights;
+                            var flights = routes.filter(function(a) { return a.dep_icao == dep && a.dest_icao == dest; })[0].flights;
 
                             // TODO: popup list of individual flights
 
@@ -348,12 +209,12 @@
                                 map.setLayoutProperty('routes', 'visibility', 'none');
                                 map.setLayoutProperty('route-names', 'visibility', 'none');
                                 showFlight(flight);
-                            }
+                            }*/
                         }
                     }
                 });
 
-                function showFlight(flight) {
+                /*function showFlight(flight) {
                     var src = map.getSource('flight');
 
                     var data = {
@@ -393,7 +254,7 @@
                     } else {
                         map.setLayoutProperty('flight', 'visibility', 'visible');
                     }
-                }
+                }*/
 
                 function animateMarker(timestamp) {
                     setTimeout(function() {
@@ -414,7 +275,7 @@
 
                 // Start the animation.
                 animateMarker(0);
-            });
+            };
         </script>
     </body>
 </html>
